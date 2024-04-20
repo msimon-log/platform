@@ -185,28 +185,12 @@ class ProductSearchTermInterpreter implements ProductSearchTermInterpreterInterf
             $matchSegments = $this->tokenizer->tokenize($match);
 
             if (\count($matchSegments) > 1) {
-                $score += \count($matchSegments) * 4;
-            }
-
-            foreach ($tokens as $token) {
-                $levenshtein = levenshtein($match, (string) $token);
-
-                if ($levenshtein === 0) {
-                    $score += 6;
-
-                    continue;
-                }
-
-                if ($levenshtein <= 2) {
-                    $score += 3;
-
-                    continue;
-                }
-
-                if ($levenshtein <= 3) {
-                    $score += 2;
+                foreach ($matchSegments as $segment) {
+                    $score += $this->calculateLevenshteinDistance($segment, $tokens);
                 }
             }
+
+            $score += $this->calculateLevenshteinDistance($match, $tokens);
 
             $scoring[$match] = $score / 10;
         }
@@ -214,6 +198,39 @@ class ProductSearchTermInterpreter implements ProductSearchTermInterpreterInterf
         uasort($scoring, fn ($a, $b) => $b <=> $a);
 
         return $scoring;
+    }
+
+    /**
+     * @param string $match
+     * @param list<string> $tokens
+     * 
+     * @return int
+     */
+    private function calculateLevenshteinDistance(string $match, array $tokens): int
+    {
+        $score = 0;
+
+        foreach ($tokens as $token) {
+            $levenshtein = levenshtein($match, (string) $token);
+
+            if ($levenshtein === 0) {
+                $score += 6;
+
+                continue;
+            }
+
+            if ($levenshtein <= 2) {
+                $score += 3;
+
+                continue;
+            }
+
+            if ($levenshtein <= 3) {
+                $score += 2;
+            }
+        }
+
+        return $score;
     }
 
     private function getConfigBooleanClause(Context $context): bool
